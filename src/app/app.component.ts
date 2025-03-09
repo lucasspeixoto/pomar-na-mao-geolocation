@@ -1,6 +1,7 @@
 import { Component, type OnInit } from '@angular/core';
+import type * as Leaflet from 'leaflet';
 
-declare const L: any;
+declare let L: typeof Leaflet; // Now L has proper typing
 
 @Component({
   selector: 'app-root',
@@ -9,54 +10,48 @@ declare const L: any;
   styleUrl: './app.component.scss',
 })
 export class AppComponent implements OnInit {
-  ngOnInit() {
+  public ngOnInit(): void {
     if (!navigator.geolocation) {
-      console.log('location is not supported');
+      console.warn('location is not supported!');
     }
+
+    let map = L.map('map');
+
     navigator.geolocation.getCurrentPosition((position) => {
       const coords = position.coords;
-      const latLong = [coords.latitude, coords.longitude];
-      console.log(
-        `lat: ${position.coords.latitude}, lon: ${position.coords.longitude}`
-      );
-      let mymap = L.map('map').setView(latLong, 13);
 
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      const { latitude, longitude } = coords;
+
+      map.setView([latitude, longitude], 13);
+
+      var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution:
-          'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-        maxZoom: 18,
-        id: 'mapbox/streets-v11',
-        tileSize: 512,
-        zoomOffset: -1,
-        accessToken: 'your.mapbox.access.token',
-      }).addTo(mymap);
+          '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> ',
+        maxZoom: 19,
+      });
 
-      let marker = L.marker(latLong).addTo(mymap);
+      osm.addTo(map);
 
-      marker.bindPopup('<b>Hi</b>').openPopup();
-
-      let popup = L.popup()
-        .setLatLng(latLong)
-        .setContent('I am Here')
-        .openOn(mymap);
+      L.marker([latitude, longitude]).addTo(map);
     });
-    this.watchPosition();
-  }
 
-  watchPosition() {
     let desLat = 0;
-    let desLon = 0;
+
     let id = navigator.geolocation.watchPosition(
       (position) => {
-        console.log(
-          `lat: ${position.coords.latitude}, lon: ${position.coords.longitude}`
-        );
-        if (position.coords.latitude === desLat) {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        if (latitude === desLat) {
           navigator.geolocation.clearWatch(id);
         }
+
+        L.marker([latitude, longitude]).addTo(map);
       },
-      (err) => {
-        console.log(err);
+      (error) => {
+        if (error.code === 1) alert('Por favor ative o GPS do dispositivo!');
+
+        alert('Não foi posível obter a localização!');
       },
       {
         enableHighAccuracy: true,
